@@ -433,7 +433,7 @@ TG_DC_ADDRESSES = {
 
 MONGO_URL_DEFAULT = os.environ.get(
     "MONGODB_URI",
-    "mongodb+srv://digitaldream3207_db_user:zx2cvteOiVAxSc4O@cluster0.29r0hhb.mongodb.net/tgbot?retryWrites=true&w=majority&authSource=admin"
+    "mongodb+srv://niranjankr0099123_db_user:jxRNbigaGx1oaQRH@cluster0.tg65lvw.mongodb.nettgbot?retryWrites=true&w=majority&authSource=admin"
 ).strip()
 
 MONGO_DB_DEFAULT = os.environ.get("MONGO_DB", "tgbot")
