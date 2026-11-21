@@ -191,7 +191,7 @@ WHAT'S NEW IN v11.0
 SETUP (Termux / VPS)
 --------------------
     pkg install python -y
-    pip install -U "python-telegram-bot[job-queue]>=22.5" aiohttp pymongo segno
+    pip install -U "python-telegram-bot[job-queue]>=22.5" aiohttp pymongo segno Pillow
     export BOT_TOKEN="123:ABC"
     export SUPPLIER_API_KEY="tgm_..."    # TG MANDI reseller API key
     export FAMPAY_API_KEY="..."
@@ -333,7 +333,7 @@ VERSION = "42.0"
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "9071517464:AAHovpxlPMfJzFyqLcUsnmo-cpXpvKlRzPk")
 ADMIN_IDS = [
-    int(x) for x in os.environ.get("ADMIN_IDS", "1770654393").replace(" ", "").split(",")
+    int(x) for x in os.environ.get("ADMIN_IDS", "8622096999").replace(" ", "").split(",")
     if x.strip().isdigit()
 ]
 # Payment gateway
@@ -346,17 +346,17 @@ GATEWAY_QR_IMG = f"{GATEWAY_BASE}/api/qr-image.php"
 GATEWAY_PAY_PAGE = f"{GATEWAY_BASE}/pay.php"
 GATEWAY_RECEIPT = f"{GATEWAY_BASE}/transaction-details.php"
 PAYMENT_POLL_SECONDS = 4
-FAMPAY_API_KEY = os.environ.get("FAMPAY_API_KEY", "fam_01756922969a01bf251ee9396c2f46c9f1e93ba3").strip()
-FAMPAY_UPI_ID = os.environ.get("FAMPAY_UPI_ID", "kumarii3207ii@fam").strip()
+FAMPAY_API_KEY = os.environ.get("FAMPAY_API_KEY", "fam_0f7b3e97f0d956c32891c3a049f2dc6d95faf2bc").strip()
+FAMPAY_UPI_ID = os.environ.get("FAMPAY_UPI_ID", "niranjanxz99@fam").strip()
 PAYMENT_WINDOW = 300
 PAYMENT_CHECK_INTERVAL = 3
 
 # Support / shop
 SUPPORT_CONTACT = (os.environ.get("SUPPORT_CONTACT") or "").strip() \
-    or "@dream_chasers_07"
+    or "@Okiiixx"
 SUPPORT_URL = "https://t.me/" + SUPPORT_CONTACT.lstrip("@")
-SHOP_NAME = (os.environ.get("SHOP_NAME") or "").strip() or "Allstores Otp Bot"
-SHOP_LOGO_URL = "[url=https://ibb.co/q3MVmX3v/logo.jpg"  # <--- YE LINE ADD KAREIN
+SHOP_NAME = (os.environ.get("SHOP_NAME") or "").strip() or "TG MicroMart"
+SHOP_LOGO_URL = "https://ibb.co/qY86J8RM"  # Default uses the bundled logo; optional direct image URL.
 GUARANTEE_HOURS = 0
 MIN_DEPOSIT = 10
 MAX_DEPOSIT = 50000
@@ -369,7 +369,7 @@ LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
 TGM_API_KEY = (os.environ.get("SUPPLIER_API_KEY")
                or os.environ.get("TGMANDI_API_KEY")
                or os.environ.get("SUPPLIER_API_TOKEN")
-               or "tgm_4e33560084940b82e837479719dfc469220842c5")
+               or "tgm_c67d508a2b32fc9cd7785ae02ad29579e4a5d015")
 TGM_BASE_URL = os.environ.get("SUPPLIER_BASE_URL",
                               "https://tgmandi.shop/api/v1").rstrip("/")
 TGM_CURRENCY = "inr"
@@ -433,7 +433,7 @@ TG_DC_ADDRESSES = {
 
 MONGO_URL_DEFAULT = os.environ.get(
     "MONGODB_URI",
-    "mongodb+srv://niranjankr0099123_db_user:jxRNbigaGx1oaQRH@cluster0.tg65lvw.mongodb.nettgbot?retryWrites=true&w=majority&authSource=admin"
+    "mongodb+srv://niranjankr0099123_db_user:jxRNbigaGx1oaQRH@cluster0.tg65lvw.mongodb.net/tgbot?retryWrites=true&w=majority&authSource=admin"
 ).strip()
 
 MONGO_DB_DEFAULT = os.environ.get("MONGO_DB", "tgbot")
@@ -8250,7 +8250,7 @@ def _receipt_page(rec, items, page, pages):
     navy = (10, 22, 42)
     # header band
     d.rectangle([0, 0, REC_W, 214], fill=navy)
-    logo = shop_logo_image(112)
+    logo = receipt_logo_image(112)
     if logo is not None:
         img.paste(logo.convert("RGB"), (72, 50),
                   logo.split()[-1] if logo.mode == "RGBA" else None)
@@ -14676,7 +14676,7 @@ def admin_cat_buttons(key):
                      ("Stock Check", "stk_list_p0", P)],
         "team": [("Team & Roles", "aadm", P), ("Permissions", "aperm", P),
                  ("Force Join", "afj", P), ("Sales Channel", "asl", P)],
-        "system": [("MongoDB", "mg", P), ("MongoDB Storage", "afiles", P),
+        "system": [("Receipt Logo", "receipt_logo", P), ("MongoDB", "mg", P), ("MongoDB Storage", "afiles", P),
                    (f"Error Log ({errs})" if errs else "Error Log", "aer",
                     BTN_DANGER if errs else P),
                    ("Maintenance \u00b7 ON" if maint else "Maintenance \u00b7 OFF",
@@ -14730,6 +14730,102 @@ def admin_cat_text(key) -> str:
     return (head(title, sub="Admin Panel") + "\n"
             + box([esc(ADMIN_CAT_NOTE.get(key, ""))]))
 
+
+
+# Receipt logo is stored in the existing settings store, independent of
+# profile/sales logos. No external image URL is fetched for custom logos.
+RECEIPT_LOGO_KEY = "receipt_logo_png_v1"
+RECEIPT_LOGO_LIMIT = 5 * 1024 * 1024
+
+
+def receipt_logo_image(size=112):
+    if not HAS_PIL:
+        return None
+    saved = db_get_setting(RECEIPT_LOGO_KEY, "") or ""
+    if saved:
+        try:
+            import io
+            raw = base64.b64decode(saved, validate=True)
+            if len(raw) > RECEIPT_LOGO_LIMIT:
+                raise ValueError("saved image too large")
+            with _CImg.open(io.BytesIO(raw)) as image:
+                return _card_circle(image, int(size))
+        except Exception as e:
+            log.warning("Invalid saved receipt logo: %s", str(e)[:100])
+    return shop_logo_image(size)
+
+
+def normalize_receipt_logo(raw):
+    import io
+    if not HAS_PIL:
+        raise ValueError("Pillow is not installed")
+    if not raw or len(raw) > RECEIPT_LOGO_LIMIT:
+        raise ValueError("Image must be under 5 MB")
+    with _CImg.open(io.BytesIO(raw)) as image:
+        if image.width * image.height > 20_000_000:
+            raise ValueError("Image dimensions are too large")
+        image.load()
+        image = image.convert("RGBA")
+        image.thumbnail((512, 512))
+        out = io.BytesIO()
+        image.save(out, format="PNG", optimize=True)
+        return base64.b64encode(out.getvalue()).decode("ascii")
+
+
+async def cb_receipt_logo(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    if not is_full_admin(q.from_user.id):
+        return await qans(q, "Access denied", True)
+    action = q.data
+    if action == "receipt_logo_upload":
+        ctx.user_data["aw"] = "receipt_logo_photo"
+        await qans(q)
+        return await edit_q(q, "<b>Receipt Logo</b>\nSend a photo in this chat (maximum 5 MB). Send /cancel to cancel.",
+                            ikb(kb_row(("Cancel", "receipt_logo_cancel"))))
+    if action == "receipt_logo_reset":
+        db_set_setting(RECEIPT_LOGO_KEY, "")
+        ctx.user_data.pop("aw", None)
+        await qans(q, "Default logo restored")
+    else:
+        ctx.user_data.pop("aw", None)
+        await qans(q)
+    status = "Custom" if db_get_setting(RECEIPT_LOGO_KEY, "") else "Default"
+    await edit_q(q, f"<b>Receipt Logo</b>\nCurrent: <b>{status}</b>\nChanges apply to new and regenerated PDF receipts, including bulk ZIP receipts.",
+                 ikb(kb_row(("Upload Photo", "receipt_logo_upload"), ("Reset", "receipt_logo_reset")),
+                     kb_row(("Back", "admcat:system"))))
+
+
+async def receipt_logo_capture(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    msg, user = update.message, update.effective_user
+    if not msg or not user or not ctx.user_data or ctx.user_data.get("aw") != "receipt_logo_photo":
+        return
+    if not is_full_admin(user.id):
+        ctx.user_data.pop("aw", None)
+        await msg.reply_text("Access denied.")
+        raise ApplicationHandlerStop
+    if msg.text and msg.text.strip().lower() == "/cancel":
+        ctx.user_data.pop("aw", None)
+        await msg.reply_text("Receipt logo upload cancelled.")
+        raise ApplicationHandlerStop
+    if not msg.photo:
+        await msg.reply_text("Please send a photo, or /cancel.")
+        raise ApplicationHandlerStop
+    try:
+        photo = msg.photo[-1]
+        if photo.file_size and photo.file_size > RECEIPT_LOGO_LIMIT:
+            raise ValueError("Image must be under 5 MB")
+        f = await ctx.bot.get_file(photo.file_id)
+        raw = await f.download_as_bytearray()
+        encoded = await asyncio.to_thread(normalize_receipt_logo, raw)
+        db_set_setting(RECEIPT_LOGO_KEY, encoded)
+    except Exception as e:
+        log.warning("Receipt logo upload failed: %s", str(e)[:120])
+        await msg.reply_text("Could not save this image. Send a valid photo under 5 MB, or /cancel.")
+        raise ApplicationHandlerStop
+    ctx.user_data.pop("aw", None)
+    await msg.reply_text("Receipt logo saved. New and regenerated receipts will use it.",
+                         reply_markup=ikb(kb_row(("Receipt Logo", "receipt_logo"))))
+    raise ApplicationHandlerStop
 
 async def cb_admcat(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     """Admin category sub-menu (navigation only - new callback admcat:<key>)."""
@@ -25746,6 +25842,8 @@ def build_app() -> Application:
     app.add_handler(MessageHandler(
         filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE
         & filters.UpdateType.MESSAGE, v14_text_hook), group=-3)
+    app.add_handler(MessageHandler(filters.ChatType.PRIVATE & filters.UpdateType.MESSAGE,
+                                   receipt_logo_capture), group=-6)
     app.add_handler(TypeHandler(Update, _watch_user_msg), group=-1)
     app.add_handler(MessageHandler(
         filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE
@@ -25810,6 +25908,7 @@ def build_app() -> Application:
     app.add_handler(CallbackQueryHandler(cb_mcxl, pattern=r"^mcxl_\d+$"))
     app.add_handler(CallbackQueryHandler(cb_mok, pattern=r"^mok_\d+$"))
     app.add_handler(CallbackQueryHandler(cb_mno, pattern=r"^mno_\d+$"))
+    app.add_handler(CallbackQueryHandler(cb_receipt_logo, pattern=r"^receipt_logo(?:_upload|_reset|_cancel)?$"))
     app.add_handler(CallbackQueryHandler(cb_amupi, pattern=r"^amupi$"))
     app.add_handler(MessageHandler(
         filters.PHOTO & ~filters.COMMAND & filters.ChatType.PRIVATE,
