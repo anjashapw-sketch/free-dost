@@ -371,7 +371,7 @@ TGM_API_KEY = (os.environ.get("SUPPLIER_API_KEY")
                or os.environ.get("SUPPLIER_API_TOKEN")
                or "tgm_4e33560084940b82e837479719dfc469220842c5")
 TGM_BASE_URL = os.environ.get("SUPPLIER_BASE_URL",
-                              "https://tgmandi.myvipsite.fun/api/v1").rstrip("/")
+                              "https://tgmandi.shop/api/v1").rstrip("/")
 TGM_CURRENCY = "inr"
 SUP_CURRENCY = TGM_CURRENCY          # supplier wallet / price currency
 
